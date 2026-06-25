@@ -1,0 +1,25 @@
+{
+  "domain": "nexus_conversation",
+  "name": "Nexus",
+  "after_dependencies": [
+    "assist_pipeline",
+    "intent"
+  ],
+  "codeowners": [
+    "@ms1design"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "conversation",
+    "zeroconf"
+  ],
+  "documentation": "https://github.com/ms1design/nexus-hacs-integration",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/ms1design/nexus-hacs-integration/issues",
+  "requirements": [
+    "openai==2.21.0"
+  ],
+  "version": "0.0.66",
+  "zeroconf": ["_nexus._tcp.local."]
+}

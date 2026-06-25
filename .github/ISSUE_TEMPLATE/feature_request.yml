@@ -1,0 +1,37 @@
+---
+name: "Feature request"
+description: "Suggest an idea for this project"
+body:
+  - type: markdown
+    attributes:
+      value: Before opening, search existing feature requests.
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have filled out the template.
+          required: true
+        - label: This is 1 feature request.
+          required: true
+        - label: This is not a duplicate.
+          required: true
+  - type: textarea
+    attributes:
+      label: "Is your feature request related to a problem? Please describe."
+      validations:
+        required: true
+  - type: textarea
+    attributes:
+      label: "Describe the solution you'd like"
+      validations:
+        required: true
+  - type: textarea
+    attributes:
+      label: "Describe alternatives you've considered"
+      validations:
+        required: true
+  - type: textarea
+    attributes:
+      label: "Additional context"
+      validations:
+        required: true

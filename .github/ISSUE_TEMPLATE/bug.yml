@@ -1,0 +1,39 @@
+---
+name: "Bug report"
+description: "Report a bug with the integration"
+body:
+  - type: markdown
+    attributes:
+      value: Before you open a new issue, search through the existing issues.
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I have enabled debug logging for my installation.
+          required: true
+        - label: I have filled out the issue template to the best of my ability.
+          required: true
+        - label: This issue only contains 1 issue.
+          required: true
+        - label: This issue is not a duplicate.
+          required: true
+  - type: textarea
+    attributes:
+      label: "Describe the issue"
+      validations:
+        required: true
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      value: |
+        1.
+        2.
+        3.
+      validations:
+        required: true
+  - type: textarea
+    attributes:
+      label: "Debug logs"
+      render: text
+    validations:
+      required: true
