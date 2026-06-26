@@ -100,7 +100,7 @@ Modern integrations should use the AI Task platform directly via subentries.
 ### Configuration Options
 - `CONF_BASE_URL`: Base URL for the Nexus API (proxied to OpenAI)
 - `CONF_API_KEY`: API key for authentication
-- `CONF_CHAT_MODEL`: Chat model to use (default: "gpt-4o-mini")
+- `CONF_CHAT_MODEL`: Chat model to use
 - `CONF_MAX_TOKENS`: Maximum tokens for responses (default: 3000)
 - `CONF_TEMPERATURE`: Temperature setting (default: 1.0)
 - `CONF_TOP_P`: Top-p setting (default: 1.0)
@@ -184,13 +184,9 @@ The integration supports streaming responses with proper delta transformation be
 ### Tool Integration
 Supports various tools:
 - Function calling
-- Code interpreter
-- Web search
-- Image generation
 
 ### Model Support
-- Chat models: gpt-4o, gpt-4o-mini, o-series, gpt-5
-- Image models: gpt-image-1
+- Models are managed in the Nexus UI
 - Reasoning models with encrypted content support
 
 ### File Handling

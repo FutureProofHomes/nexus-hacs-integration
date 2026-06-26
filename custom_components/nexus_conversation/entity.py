@@ -564,7 +564,7 @@ class NexusBaseLLMEntity(Entity):
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, subentry.subentry_id)},
             name=subentry.title,
-            manufacturer="Nexus",
+            manufacturer="FutureProofHomes",
             model=subentry.data.get(
                 CONF_CHAT_MODEL,
                 RECOMMENDED_CHAT_MODEL,

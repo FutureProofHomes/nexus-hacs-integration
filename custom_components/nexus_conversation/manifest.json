@@ -1,6 +1,6 @@
 {
   "domain": "nexus_conversation",
-  "name": "Nexus",
+  "name": "Nexus ",
   "after_dependencies": [
     "assist_pipeline",
     "intent"
