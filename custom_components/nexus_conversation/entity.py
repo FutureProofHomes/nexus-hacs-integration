@@ -829,10 +829,10 @@ class NexusBaseLLMEntity(Entity):
                         },
                     )
 
-                LOGGER.error("Provider communication error: %s", err)
+                LOGGER.error("Nexus Server communication error: %s", err)
                 raise HomeAssistantError(
-                    "Error communicating with Nexus: %s", err
-                ) from err
+                    "Error communicating with Nexus, please check if the Nexus Server is active."
+                )
 
             if not chat_log.unresponded_tool_results:
                 break
