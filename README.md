@@ -26,7 +26,7 @@
 <br/>
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
-[![GitHub Release](https://img.shields.io/github/v/release/ms1design/nexus-hacs-integration)](https://github.com/ms1design/nexus-hacs-integration/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/futureproofhomes/nexus-hacs-integration)](https://github.com/ms1design/nexus-hacs-integration/releases)
 
 ## Overview
 
