@@ -16,9 +16,9 @@
     &nbsp;·&nbsp;
     🍿&nbsp;<a href="https://www.youtube.com/@futureproofhomes">View Demos</a>
     &nbsp;·&nbsp;
-    🐛&nbsp;<a href="https://github.com/ms1design/nexus-hacs-integration/issues/new?labels=bug&template=bug.yml">Report Bug</a>
+    🐛&nbsp;<a href="https://github.com/futureproofhomes/nexus-hacs-integration/issues/new?labels=bug&template=bug.yml">Report Bug</a>
     &nbsp;·&nbsp;
-    💡&nbsp;<a href="https://github.com/ms1design/nexus-hacs-integration/issues/new?labels=enhancement&template=feature_request.yml">Request Feature</a>
+    💡&nbsp;<a href="https://github.com/futureproofhomes/nexus-hacs-integration/issues/new?labels=enhancement&template=feature_request.yml">Request Feature</a>
   </p>
   <p>⭐ <b>Star us on GitHub</b> — it motivates us a lot!</p>
 </div>
@@ -26,7 +26,7 @@
 <br/>
 
 [![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
-[![GitHub Release](https://img.shields.io/github/v/release/futureproofhomes/nexus-hacs-integration)](https://github.com/ms1design/nexus-hacs-integration/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/futureproofhomes/nexus-hacs-integration)](https://github.com/futureproofhomes/nexus-hacs-integration/releases)
 
 ## Overview
 
@@ -69,7 +69,7 @@ These enrichments happen transparently before the request reaches Nexus — no p
 ### HACS (Recommended)
 
 1. Open HACS → Integrations → "+" → **Explore & Download Repositories**
-2. Search for **"Nexus"** or add this repository: `https://github.com/ms1design/nexus-hacs-integration`
+2. Search for **"Nexus"** or add this repository: `https://github.com/futureproofhomes/nexus-hacs-integration`
 3. Click **Download** and restart Home Assistant
 4. Go to **Settings → Devices & Services → Add Integration** → search for **"Nexus"**
 
