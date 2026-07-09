@@ -5,16 +5,11 @@ from __future__ import annotations
 import base64
 import json
 import re
-from collections.abc import AsyncGenerator, Callable, Iterable
 from mimetypes import guess_file_type
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import openai
-import voluptuous as vol
 from homeassistant.components import conversation
-from homeassistant.config_entries import ConfigSubentry
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     area_registry,
@@ -31,7 +26,6 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.json import json_dumps
 from homeassistant.util import slugify
-from openai._streaming import AsyncStream
 from openai.types.responses import (
     EasyInputMessageParam,
     FunctionToolParam,
@@ -116,6 +110,14 @@ from .const import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Iterable
+    from pathlib import Path
+
+    import voluptuous as vol
+    from homeassistant.config_entries import ConfigSubentry
+    from homeassistant.core import HomeAssistant
+    from openai._streaming import AsyncStream
+
     from . import NexusConfigEntry
 
 
@@ -343,7 +345,7 @@ def _convert_content_to_param(
     return messages
 
 
-async def _transform_stream(  # noqa: C901 - This is complex, but better to have it in one place
+async def _transform_stream(
     chat_log: conversation.ChatLog,
     stream: AsyncStream[ResponseStreamEvent],
     remove_citations: bool = False,
@@ -530,7 +532,8 @@ async def _transform_stream(  # noqa: C901 - This is complex, but better to have
             elif reason == "content_filter":
                 reason = "content filter triggered"
 
-            raise HomeAssistantError(f"Response incomplete: {reason}")
+            msg = f"Response incomplete: {reason}"
+            raise HomeAssistantError(msg)
         elif isinstance(event, ResponseFailedEvent):
             if event.response.usage is not None:
                 chat_log.async_trace(
@@ -544,9 +547,11 @@ async def _transform_stream(  # noqa: C901 - This is complex, but better to have
             reason = "unknown reason"
             if event.response.error is not None:
                 reason = event.response.error.message
-            raise HomeAssistantError(f"Response failed: {reason}")
+            msg = f"Response failed: {reason}"
+            raise HomeAssistantError(msg)
         elif isinstance(event, ResponseErrorEvent):
-            raise HomeAssistantError(f"Response error: {event.message}")
+            msg = f"Response error: {event.message}"
+            raise HomeAssistantError(msg)
 
 
 class NexusBaseLLMEntity(Entity):
@@ -735,9 +740,8 @@ class NexusBaseLLMEntity(Entity):
             if not (
                 last_message["type"] == "message" and last_message["role"] == "user"
             ):
-                raise HomeAssistantError(
-                    "Unable to attach files: unexpected message format in chat log"
-                )
+                msg = "Unable to attach files: unexpected message format in chat log"
+                raise HomeAssistantError(msg)
             if isinstance(last_message["content"], str):
                 last_message["content"] = [
                     {"type": "input_text", "text": last_message["content"]},
@@ -746,9 +750,8 @@ class NexusBaseLLMEntity(Entity):
             elif isinstance(last_message["content"], list):
                 last_message["content"].extend(files)
             else:
-                raise HomeAssistantError(
-                    "Unable to attach files: unexpected content type in chat log"
-                )
+                msg = "Unable to attach files: unexpected content type in chat log"
+                raise HomeAssistantError(msg)
 
         if structure and structure_name:
             model_args["text"] = {
@@ -806,14 +809,16 @@ class NexusBaseLLMEntity(Entity):
                     model_args["service_tier"] = "default"
                     continue
                 LOGGER.error("Rate limited by provider: %s", err)
-                raise HomeAssistantError("Rate limited or insufficient funds") from err
+                msg = "Rate limited or insufficient funds"
+                raise HomeAssistantError(msg) from err
             except openai.OpenAIError as err:
                 if (
                     isinstance(err, openai.APIError)
                     and err.type == "insufficient_quota"
                 ):
                     LOGGER.error("Provider billing error: %s", err)
-                    raise HomeAssistantError("Insufficient funds for provider") from err
+                    msg = "Insufficient funds for provider"
+                    raise HomeAssistantError(msg) from err
                 if "Verify Organization" in str(err):
                     ir.async_create_issue(
                         self.hass,
@@ -830,9 +835,8 @@ class NexusBaseLLMEntity(Entity):
                     )
 
                 LOGGER.error("Nexus Server communication error: %s", err)
-                raise HomeAssistantError(
-                    "Error communicating with Nexus, please check if the Nexus Server is active."
-                )
+                msg = "Error communicating with Nexus, please check if the Nexus Server is active."
+                raise HomeAssistantError(msg) from err
 
             if not chat_log.unresponded_tool_results:
                 break
@@ -850,34 +854,37 @@ async def async_prepare_files_for_prompt(
     def append_files_to_content() -> ResponseInputMessageContentListParam:
         content: ResponseInputMessageContentListParam = []
 
-        for file_path, mime_type in files:
+        for file_path, provided_mime in files:
             if not file_path.exists():
-                raise HomeAssistantError(f"`{file_path}` does not exist")
+                msg = f"`{file_path}` does not exist"
+                raise HomeAssistantError(msg)
 
-            if mime_type is None:
-                mime_type = guess_file_type(file_path)[0]
+            effective_mime = provided_mime
+            if effective_mime is None:
+                effective_mime, _ = guess_file_type(file_path)
 
-            if not mime_type or not mime_type.startswith(("image/", "application/pdf")):
-                raise HomeAssistantError(
-                    "Only images and PDFs are supported as file inputs,"
-                )
+            if not effective_mime or not effective_mime.startswith(
+                ("image/", "application/pdf")
+            ):
+                msg = "Only images and PDFs are supported as file inputs,"
+                raise HomeAssistantError(msg)
 
             base64_file = base64.b64encode(file_path.read_bytes()).decode("utf-8")
 
-            if mime_type.startswith("image/"):
+            if effective_mime.startswith("image/"):
                 content.append(
                     ResponseInputImageParam(
                         type="input_image",
-                        image_url=f"data:{mime_type};base64,{base64_file}",
+                        image_url=f"data:{effective_mime};base64,{base64_file}",
                         detail="auto",
                     )
                 )
-            elif mime_type.startswith("application/pdf"):
+            elif effective_mime.startswith("application/pdf"):
                 content.append(
                     ResponseInputFileParam(
                         type="input_file",
                         filename=str(file_path),
-                        file_data=f"data:{mime_type};base64,{base64_file}",
+                        file_data=f"data:{effective_mime};base64,{base64_file}",
                     )
                 )
 

@@ -7,9 +7,7 @@ from json import JSONDecodeError
 from typing import TYPE_CHECKING
 
 from homeassistant.components import ai_task, conversation
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util.json import json_loads
 
 from .const import (
@@ -20,6 +18,8 @@ from .entity import NexusBaseLLMEntity
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigSubentry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
     from . import NexusConfigEntry
 
@@ -55,7 +55,7 @@ class NexusTaskEntity(
             ai_task.AITaskEntityFeature.GENERATE_DATA
             | ai_task.AITaskEntityFeature.SUPPORT_ATTACHMENTS
         )
-        model = self.subentry.data.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL)
+        self.subentry.data.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL)
 
     async def _async_generate_data(
         self,
@@ -71,9 +71,8 @@ class NexusTaskEntity(
         )
 
         if not isinstance(chat_log.content[-1], conversation.AssistantContent):
-            raise HomeAssistantError(
-                "Last content in chat log is not an AssistantContent"
-            )
+            msg = "Last content in chat log is not an AssistantContent"
+            raise HomeAssistantError(msg)
 
         text = chat_log.content[-1].content or ""
 
@@ -85,12 +84,12 @@ class NexusTaskEntity(
         try:
             data = json_loads(text)
         except JSONDecodeError as err:
-            _LOGGER.error(
-                "Failed to parse JSON response: %s. Response: %s",
-                err,
+            _LOGGER.exception(
+                "Failed to parse JSON response. Response: %s",
                 text,
             )
-            raise HomeAssistantError("Error generating structured response") from err
+            msg = "Error generating structured response"
+            raise HomeAssistantError(msg) from err
 
         return ai_task.GenDataTaskResult(
             conversation_id=chat_log.conversation_id,

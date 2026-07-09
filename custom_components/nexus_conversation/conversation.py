@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Literal, override
+from typing import TYPE_CHECKING, Literal, override
 
 from homeassistant.components import conversation
-from homeassistant.config_entries import ConfigSubentry
 from homeassistant.const import CONF_LLM_HASS_API, CONF_PROMPT, MATCH_ALL
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import NexusConfigEntry
 from .const import DOMAIN
 from .entity import NexusBaseLLMEntity, _derive_area_context
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigSubentry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from . import NexusConfigEntry
 
 # Max number of back and forth with the LLM to generate a response
 

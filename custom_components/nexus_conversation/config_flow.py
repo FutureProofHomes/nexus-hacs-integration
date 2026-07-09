@@ -5,8 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import urllib.parse
-from collections.abc import Mapping
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 import openai
 import voluptuous as vol
@@ -41,8 +40,6 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TemplateSelector,
 )
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-from homeassistant.helpers.typing import VolDictType
 from voluptuous_openapi import convert
 
 from . import _check_health, _HealthCheckError
@@ -93,6 +90,12 @@ from .const import (
     UNSUPPORTED_WEB_SEARCH_MODELS,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+    from homeassistant.helpers.typing import VolDictType
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -118,12 +121,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
 
     parsed = urllib.parse.urlparse(base_url)
     if not parsed.scheme or not parsed.netloc:
-        raise vol.Invalid("Invalid URL for base_url")
+        msg = "Invalid URL for base_url"
+        raise vol.Invalid(msg)
 
-    # Validate base_url ends with /home-assistant/v1 (case-insensitive, strip trailing slash)
+    # Validate base_url ends with /home-assistant/v1
     path = parsed.path.rstrip("/")
     if not path.lower().endswith("/home-assistant/v1"):
-        raise vol.Invalid("base_url must end with /home-assistant/v1")
+        msg = "base_url must end with /home-assistant/v1"
+        raise vol.Invalid(msg)
 
     client = openai.AsyncOpenAI(
         api_key=data[CONF_API_KEY],
@@ -136,8 +141,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
         await _check_health(http_client, base_url)
     except _HealthCheckError as err:
         if err.status_code == 401:
-            raise vol.Invalid("Invalid API key") from err
-        raise vol.Invalid(f"Health check failed ({err.status_code})") from err
+            msg = "Invalid API key"
+            raise vol.Invalid(msg) from err
+        msg = f"Health check failed ({err.status_code})"
+        raise vol.Invalid(msg) from err
 
 
 class NexusConfigFlow(ConfigFlow, domain=DOMAIN):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import urllib.parse
 from pathlib import Path
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 import httpx
 import openai
@@ -33,7 +34,6 @@ from homeassistant.helpers import (
     selector,
 )
 from homeassistant.helpers.httpx_client import get_async_client
-from homeassistant.helpers.typing import ConfigType
 from openai.types.responses import (
     EasyInputMessageParam,
     Response,
@@ -48,7 +48,6 @@ from .const import (
     CONF_FILENAMES,
     CONF_MAX_TOKENS,
     CONF_REASONING_EFFORT,
-    CONF_REASONING_SUMMARY,
     CONF_STORE_RESPONSES,
     CONF_TEMPERATURE,
     CONF_TOP_P,
@@ -59,12 +58,14 @@ from .const import (
     RECOMMENDED_CHAT_MODEL,
     RECOMMENDED_MAX_TOKENS,
     RECOMMENDED_REASONING_EFFORT,
-    RECOMMENDED_REASONING_SUMMARY,
     RECOMMENDED_STORE_RESPONSES,
     RECOMMENDED_TEMPERATURE,
     RECOMMENDED_TOP_P,
 )
 from .entity import async_prepare_files_for_prompt
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.typing import ConfigType
 
 SERVICE_GENERATE_CONTENT = "generate_content"
 
@@ -74,9 +75,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 type NexusConfigEntry = ConfigEntry[openai.AsyncClient]
 
 
-async def _check_health(
-    http_client: httpx.AsyncClient, base_url: str
-) -> None:
+async def _check_health(http_client: httpx.AsyncClient, base_url: str) -> None:
     """Lightweight health check against /v1/health endpoint."""
     parsed = urllib.parse.urlparse(base_url)
     try:
@@ -141,7 +140,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             None,
         )
         if not conversation_subentry:
-            raise ServiceValidationError("No conversation configuration found")
+            msg = "No conversation configuration found"
+            raise ServiceValidationError(msg)
 
         model: str = conversation_subentry.data.get(
             CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL
@@ -155,11 +155,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if filenames := call.data.get(CONF_FILENAMES):
             for filename in filenames:
                 if not hass.config.is_allowed_path(filename):
-                    raise HomeAssistantError(
+                    msg = (
                         f"Cannot read `{filename}`, no access to path; "
                         "`allowlist_external_dirs` may need to be adjusted in "
                         "`configuration.yaml`"
                     )
+                    raise HomeAssistantError(msg)
 
             content.extend(
                 await async_prepare_files_for_prompt(
@@ -198,11 +199,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             response: Response = await client.responses.create(**model_args)
         except openai.AuthenticationError as err:
             entry.async_start_reauth(hass)
-            raise HomeAssistantError("Authentication error") from err
+            msg = "Authentication error"
+            raise HomeAssistantError(msg) from err
         except openai.OpenAIError as err:
-            raise HomeAssistantError(f"Error generating content: {err}") from err
+            msg = f"Error generating content: {err}"
+            raise HomeAssistantError(msg) from err
         except FileNotFoundError as err:
-            raise HomeAssistantError(f"Error generating content: {err}") from err
+            msg = f"Error generating content: {err}"
+            raise HomeAssistantError(msg) from err
 
         return {"text": response.output_text}
 
