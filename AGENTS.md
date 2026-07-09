@@ -209,11 +209,61 @@ Test various error conditions:
 - Organization verification requirements
 - Content filters
 - Max tokens reached
-
 ### Streaming Tests
+
 Verify streaming works correctly with:
 - Text responses
 - Thinking content (reasoning)
 - Tool calls
 - Multiple reasoning summaries
 - Image generation
+
+## Release Process
+
+This is a HACS integration. Releases are distributed via GitHub tags and HACS picks them up automatically.
+
+### Pre-release checklist
+
+- Run linters and tests locally (`./scripts/lint`)
+- Ensure `CHANGELOG.md` is updated with all notable changes under an `unreleased` heading
+- Confirm the minimum Home Assistant version in `hacs.json` still aligns with target releases
+
+### Step-by-step release
+
+1. **Bump the version** in `custom_components/nexus_conversation/manifest.json`
+   - Follow semantic versioning (`major.minor.patch`)
+   - Example: `"version": "0.1.0"` becomes `"version": "0.2.0"`
+
+2. **Update the changelog** (`CHANGELOG.md`)
+   - Replace the `unreleased` section with the version number and release date
+   - Add a new empty `unreleased` section above it following the Keep a Changelog template
+   - Group changes under: `Added`, `Changed`, `Fixed`, `Removed`
+
+3. **Commit the bump**
+   ```bash
+   git add custom_components/nexus_conversation/manifest.json CHANGELOG.md
+   git commit -m "chore(version): bump to vX.Y.Z"
+   ```
+
+4. **Tag the release**
+   ```bash
+   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   ```
+
+5. **Push to GitHub**
+   ```bash
+   git push origin main
+   git push origin vX.Y.Z
+   ```
+
+6. **Publish a GitHub Release** (optional but recommended)
+   - Create a release on GitHub matching the tag
+   - Paste the changelog notes as the release description
+   - HACS will pick up the tagged version automatically
+
+### Automated release (future)
+
+Consider adding a GitHub Actions workflow (`.github/workflows/release.yml`) that:
+- Triggers on tag push matching `v*`
+- Creates a GitHub Release with changelog notes
+- Runs lint/tests before publishing
