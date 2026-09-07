@@ -40,7 +40,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
     TemplateSelector,
 )
-from voluptuous_openapi import convert
+from probatio import to_openapi
 
 from . import _check_health, _HealthCheckError
 from .const import (
@@ -778,7 +778,7 @@ class NexusSubentryFlowHandler(ConfigSubentryFlow):
                         "name": "approximate_location",
                         "description": "Approximate location data of the user "
                         "for refined web search results",
-                        "schema": convert(location_schema),
+                        "schema": to_openapi(location_schema),
                         "strict": False,
                     }
                 },

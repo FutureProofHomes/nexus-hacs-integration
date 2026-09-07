@@ -14,12 +14,12 @@
     "zeroconf"
   ],
   "documentation": "https://github.com/ms1design/nexus-hacs-integration",
+  "homeassistant": "2026.9.1",
   "integration_type": "service",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ms1design/nexus-hacs-integration/issues",
   "requirements": [
-    "openai>=2.45.0",
-    "voluptuous-openapi>=0.4.1"
+    "openai>=2.45.0"
   ],
   "version": "0.1.4",
   "zeroconf": ["_nexus._tcp.local."]

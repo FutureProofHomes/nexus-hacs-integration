@@ -41,9 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Migrate schema conversion from voluptuous-openapi to probatio (aligns with
+  HA core 2026.9.1); minimum HA version raised to 2026.9.1
+
 ### Fixed
 
 ### Removed
+
+- Drop the voluptuous-openapi dependency
 
 ## [0.1.4] - 2026-09-07
 
