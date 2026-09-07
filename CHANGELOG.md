@@ -44,3 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Removed
+
+## [0.1.4] - 2026-09-07
+
+### Added
+
+- Add voluptuous-openapi requirement for OpenAPI schema support
