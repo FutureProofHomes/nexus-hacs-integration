@@ -35,20 +35,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add release process to AGENTS.md
 - Update README.md
 
-## [unreleased]
-
-### Added
+## [0.1.5] - 2026-09-07
 
 ### Changed
 
 - Migrate schema conversion from voluptuous-openapi to probatio (aligns with
   HA core 2026.9.1); minimum HA version raised to 2026.9.1
 
-### Fixed
-
 ### Removed
 
 - Drop the voluptuous-openapi dependency
+
+## [unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
 
 ## [0.1.4] - 2026-09-07
 
