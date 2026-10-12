@@ -102,7 +102,7 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(
-            CONF_BASE_URL, default="http://<NEXUS_IP>:5015/home-assistant/v1"
+            CONF_BASE_URL, default="http://<NEXUS_IP>:5015/v1"
         ): str,
         vol.Required(CONF_API_KEY, default="sk-1"): str,
     }
@@ -124,10 +124,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
         msg = "Invalid URL for base_url"
         raise vol.Invalid(msg)
 
-    # Validate base_url ends with /home-assistant/v1
+    # Validate base_url ends with /v1
     path = parsed.path.rstrip("/")
-    if not path.lower().endswith("/home-assistant/v1"):
-        msg = "base_url must end with /home-assistant/v1"
+    if not path.lower().endswith("/v1"):
+        msg = "base_url must end with /v1"
         raise vol.Invalid(msg)
 
     client = openai.AsyncOpenAI(
@@ -166,7 +166,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title="Nexus",
                 data={
-                    CONF_BASE_URL: f"http://{self._discovered_host}:{self._discovered_port}/home-assistant/v1",
+                    CONF_BASE_URL: f"http://{self._discovered_host}:{self._discovered_port}/v1",
                     CONF_API_KEY: self.context.get("api_key", "sk-1"),
                 },
                 subentries=[
@@ -211,7 +211,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id, raise_on_progress=False)
         self._abort_if_unique_id_configured(
             updates={
-                CONF_BASE_URL: f"http://{host}:{port}/home-assistant/v1",
+                CONF_BASE_URL: f"http://{host}:{port}/v1",
                 CONF_API_KEY: api_key,
             }
         )
@@ -220,7 +220,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             await validate_input(
                 self.hass,
                 {
-                    CONF_BASE_URL: f"http://{host}:{port}/home-assistant/v1",
+                    CONF_BASE_URL: f"http://{host}:{port}/v1",
                     CONF_API_KEY: api_key,
                 },
             )
@@ -239,7 +239,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title="Nexus",
                 data={
-                    CONF_BASE_URL: f"http://{host}:{port}/home-assistant/v1",
+                    CONF_BASE_URL: f"http://{host}:{port}/v1",
                     CONF_API_KEY: api_key,
                 },
                 subentries=[

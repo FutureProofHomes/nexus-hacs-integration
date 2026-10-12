@@ -28,7 +28,7 @@
         },
         "data_description": {
           "api_key": "Your Nexus API key.",
-          "base_url": "The base URL of the Nexus API endpoint, default: http://YOUR_NEXUS_IP:5015/home-assistant/v1"
+          "base_url": "The base URL of the Nexus API endpoint, default: http://YOUR_NEXUS_IP:5015/v1"
         },
         "description": "Set up Nexus integration by providing your Nexus Device Base URL and API key. Instructions to obtain an API key can be found [here]({instructions_url})."
       },

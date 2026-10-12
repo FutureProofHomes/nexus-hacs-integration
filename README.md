@@ -93,7 +93,7 @@ After installing, add the Nexus integration through the HA UI:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `base_url` | Nexus API endpoint | `http://<NEXUS_HOST>:5015/home-assistant/v1` |
+| `base_url` | Nexus API endpoint | `http://<NEXUS_HOST>:5015/v1` |
 | `api_key` | Your API key | `sk-1` |
 
 ## Setting Up Nexus
