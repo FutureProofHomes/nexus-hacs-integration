@@ -101,9 +101,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(
-            CONF_BASE_URL, default="http://<NEXUS_IP>:5015/v1"
-        ): str,
+        vol.Required(CONF_BASE_URL, default="http://<NEXUS_IP>:5015/v1"): str,
         vol.Required(CONF_API_KEY, default="sk-1"): str,
     }
 )
