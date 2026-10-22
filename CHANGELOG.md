@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [0.2.0] - 2026-10-22
+
+### Changed
+
+- Remove the `/home-assistant` URL prefix from Nexus API endpoints; the base
+  URL is now `http://<host>:5015/v1` (config flow default, validation, and
+  zeroconf discovery) — manually configured `base_url` values must be updated
+
+## [0.1.5] - 2026-09-07
+
+### Changed
+
+- Migrate schema conversion from voluptuous-openapi to probatio (aligns with
+  HA core 2026.9.1); minimum HA version raised to 2026.9.1
+
+### Removed
+
+- Drop the voluptuous-openapi dependency
+
+## [0.1.4] - 2026-09-07
+
+### Added
+
+- Add voluptuous-openapi requirement for OpenAPI schema support
+
 ## [0.1.3] - 2026-08-10
 
 ### Changed
@@ -34,30 +69,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add release process to AGENTS.md
 - Update README.md
-
-## [0.1.5] - 2026-09-07
-
-### Changed
-
-- Migrate schema conversion from voluptuous-openapi to probatio (aligns with
-  HA core 2026.9.1); minimum HA version raised to 2026.9.1
-
-### Removed
-
-- Drop the voluptuous-openapi dependency
-
-## [unreleased]
-
-### Added
-
-### Changed
-
-### Fixed
-
-### Removed
-
-## [0.1.4] - 2026-09-07
-
-### Added
-
-- Add voluptuous-openapi requirement for OpenAPI schema support
