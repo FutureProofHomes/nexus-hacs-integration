@@ -15,6 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+## [0.2.1] - 2026-10-26
+
+### Added
+
+- Honour the `scheme` TXT record of the `_nexus._tcp` announcement when
+  building the base URL (default `http`); the discovered port now comes from
+  the advertisement instead of being hardcoded to 5015
+- Discovery cards show the per-device mDNS instance name (e.g.
+  `Nexus (nexus-f5cfcb57)`) so multiple appliances on one LAN are
+  distinguishable
+
+### Changed
+
+- Manual setup default base URL points at the appliance proxy edge
+  (`http://<NEXUS_IP>:80/v1`); the TLS-only backend port is no longer a
+  usable plain-HTTP target
+
+### Fixed
+
+- Classify every httpx transport failure as a connection problem — a
+  TLS-only backend dropping plain-HTTP probes (`RemoteProtocolError`) no
+  longer surfaces as an "Unexpected exception" traceback
+- Already-configured devices abort discovery quietly (unique-id match plus
+  endpoint matching including DNS-resolved addresses), instead of showing
+  the card again after every HA restart
+- Unreachable devices abort discovery with `cannot_connect` instead of
+  creating a config entry that can never load
+
 ## [0.2.0] - 2026-10-22
 
 ### Changed
