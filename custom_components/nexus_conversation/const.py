@@ -10,6 +10,10 @@ from homeassistant.helpers import llm
 DOMAIN = "nexus_conversation"
 LOGGER: logging.Logger = logging.getLogger(__package__)
 
+# Nexus advertises its URL scheme (and LAN-facing port) in the _nexus._tcp
+# TXT record; announcements without it are plain-HTTP backends.
+DEFAULT_DISCOVERY_SCHEME = "http"
+
 DEFAULT_CONVERSATION_NAME = "Nexus Conversation"
 DEFAULT_AI_TASK_NAME = "Nexus AI Task"
 

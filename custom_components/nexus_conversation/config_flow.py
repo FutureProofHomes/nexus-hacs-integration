@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 import urllib.parse
 from typing import TYPE_CHECKING, Any, override
 
@@ -29,6 +30,7 @@ from homeassistant.const import (
     CONF_PROMPT,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import llm
 from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.selector import (
@@ -66,6 +68,7 @@ from .const import (
     CONF_WEB_SEARCH_USER_LOCATION,
     DEFAULT_AI_TASK_NAME,
     DEFAULT_CONVERSATION_NAME,
+    DEFAULT_DISCOVERY_SCHEME,
     DOMAIN,
     RECOMMENDED_AI_TASK_OPTIONS,
     RECOMMENDED_CHAT_MODEL,
@@ -101,7 +104,9 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_BASE_URL, default="http://<NEXUS_IP>:5015/v1"): str,
+        # The appliance exposes plain HTTP on :80 via its reverse proxy; a
+        # direct backend deployment would be :5015 (HTTPS by default).
+        vol.Required(CONF_BASE_URL, default="http://<NEXUS_IP>:80/v1"): str,
         vol.Required(CONF_API_KEY, default="sk-1"): str,
     }
 )
@@ -154,7 +159,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the config flow."""
         self._discovered_host: str = ""
-        self._discovered_port: int = 0
+        self._discovered_base_url: str = ""
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
@@ -164,7 +169,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title="Nexus",
                 data={
-                    CONF_BASE_URL: f"http://{self._discovered_host}:{self._discovered_port}/v1",
+                    CONF_BASE_URL: self._discovered_base_url,
                     CONF_API_KEY: self.context.get("api_key", "sk-1"),
                 },
                 subentries=[
@@ -192,6 +197,58 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
+    async def _async_endpoint_keys(self, base_url: str) -> set[str]:
+        """
+        Identity keys ("host:port") for a Nexus base URL.
+
+        Includes DNS-resolved addresses so a manual setup by mDNS hostname
+        (nexus.local) matches a discovery announcement by LAN IP.
+
+        Known limits, by design: two appliances behind one shared
+        reverse proxy (same host:port) are indistinguishable, and on
+        container installs without an mDNS resolver the hostname-vs-IP
+        match silently does not fire.
+        """
+        parsed = urllib.parse.urlparse(base_url)
+        host = parsed.hostname
+        if not host:
+            return set()
+        try:
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        except ValueError:
+            # Malformed stored port: no sane key exists, so endpoint
+            # matching cannot run for this URL (unique_id matching
+            # still applies).
+            return set()
+        keys = {f"{host}:{port}"}
+        try:
+            addrinfos = await self.hass.async_add_executor_job(
+                socket.getaddrinfo, host, None
+            )
+        except (OSError, UnicodeError):
+            # gaierror/herror/timeout resolve to OSError; non-ASCII
+            # hostnames raise UnicodeEncodeError (a ValueError).
+            return keys
+        for addrinfo in addrinfos:
+            keys.add(f"{addrinfo[4][0]}:{port}")
+        return keys
+
+    async def _async_abort_if_endpoint_configured(self, base_url: str) -> None:
+        """
+        Abort discovery when the same Nexus endpoint is already configured.
+
+        Entries created manually carry no device_id-based unique_id, so
+        unique-id matching alone cannot recognise them.
+        """
+        discovered_keys = await self._async_endpoint_keys(base_url)
+        for entry in self._async_current_entries():
+            entry_url = entry.data.get(CONF_BASE_URL)
+            if not entry_url:
+                continue
+            if await self._async_endpoint_keys(str(entry_url)) & discovered_keys:
+                msg = "already_configured"
+                raise AbortFlow(msg)
+
     @override
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
@@ -199,36 +256,60 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle zeroconf discovery."""
         host = discovery_info.host
         port = discovery_info.port or 5015
+        # Nexus advertises its URL scheme in the TXT record: the appliance
+        # serves plain HTTP through its reverse proxy while the backend is
+        # HTTPS-only. Announcements without it are plain-HTTP backends.
+        # TXT values can be None for valueless keys, hence the `or` chain.
+        scheme = (
+            discovery_info.properties.get("scheme") or DEFAULT_DISCOVERY_SCHEME
+        ).strip().lower() or DEFAULT_DISCOVERY_SCHEME
+        base_url = f"{scheme}://{host}:{port}/v1"
 
         self._discovered_host = host
-        self._discovered_port = port
+        self._discovered_base_url = base_url
 
         unique_id = discovery_info.properties.get("device_id") or f"{host}:{port}"
-        api_key = discovery_info.properties.get("api_key", "sk-1")
+        api_key = discovery_info.properties.get("api_key") or "sk-1"
 
+        # Unique-id and endpoint checks run before any network I/O so
+        # already-configured units abort quietly instead of re-erroring on
+        # every announcement.
         await self.async_set_unique_id(unique_id, raise_on_progress=False)
         self._abort_if_unique_id_configured(
             updates={
-                CONF_BASE_URL: f"http://{host}:{port}/v1",
+                CONF_BASE_URL: base_url,
                 CONF_API_KEY: api_key,
             }
         )
+        await self._async_abort_if_endpoint_configured(base_url)
 
+        # Only surface the discovery card for a healthy device: an
+        # unreachable Nexus would otherwise create an entry that can never
+        # load. HA re-runs discovery on the next announcement once the
+        # device responds again (a device that returns without
+        # re-announcing only yields the card after a HA restart).
         try:
-            await validate_input(
-                self.hass,
-                {
-                    CONF_BASE_URL: f"http://{host}:{port}/v1",
-                    CONF_API_KEY: api_key,
-                },
+            await _check_health(get_async_client(self.hass), base_url)
+        except _HealthCheckError as err:
+            _LOGGER.warning(
+                "Discovered Nexus at %s is not reachable (%s). Discovery "
+                "retries when the device responds again",
+                base_url,
+                err.message,
             )
-        except vol.Invalid:
-            pass
-        except Exception:
-            _LOGGER.exception("Unexpected error during zeroconf discovery")
+            return self.async_abort(reason="cannot_connect")
+
+        # The service instance name is the per-device display name
+        # ("Nexus (nexus-...)") so a fleet of appliances is
+        # distinguishable on the discovery card.
+        instance_name = "Nexus"
+        if discovery_info.type and discovery_info.name.endswith(
+            f".{discovery_info.type}"
+        ):
+            instance_name = discovery_info.name[: -len(discovery_info.type) - 1]
 
         self.context["title_placeholders"] = {
-            "name": discovery_info.properties.get("model", "Nexus"),
+            "name": discovery_info.properties.get("model") or instance_name,
             "host": host,
         }
         self.context["api_key"] = api_key
@@ -237,7 +318,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title="Nexus",
                 data={
-                    CONF_BASE_URL: f"http://{host}:{port}/v1",
+                    CONF_BASE_URL: base_url,
                     CONF_API_KEY: api_key,
                 },
                 subentries=[

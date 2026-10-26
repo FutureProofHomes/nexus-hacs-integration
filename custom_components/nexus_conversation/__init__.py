@@ -86,7 +86,11 @@ async def _check_health(http_client: httpx.AsyncClient, base_url: str) -> None:
         resp.raise_for_status()
     except httpx.HTTPStatusError as err:
         raise _HealthCheckError(err.response.status_code, str(err)) from err
-    except (httpx.ConnectError, httpx.TimeoutException) as err:
+    except httpx.HTTPError as err:
+        # Covers every transport-level failure: ConnectError, TimeoutException,
+        # and RemoteProtocolError. A TLS-only backend receiving a plain-HTTP
+        # probe drops the connection without a response (RemoteProtocolError),
+        # which previously escaped as an unexpected exception.
         raise _HealthCheckError(0, str(err)) from err
 
 
