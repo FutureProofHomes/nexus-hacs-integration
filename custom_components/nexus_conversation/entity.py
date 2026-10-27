@@ -129,13 +129,21 @@ def _derive_area_context(
     hass: HomeAssistant,
     device_id: str | None,
     satellite_id: str | None,
-) -> tuple[str | None, str | None, str | None]:
+) -> tuple[str | None, str | None, str | None, str | None]:
     """
     Derive area context from device/satellite registries.
 
     Mirrors HA core's DefaultAgent._get_satellite_area_and_device() pattern.
-    Returns (area_id, area_name, floor_name) — area_name/floor_name are None
-    when the area entry lacks a name or floor association.
+    Returns (device_id, area_id, area_name, floor_name) — device_id is the
+    RESOLVED device (the satellite entity's registry device when available,
+    else the passed device id): it scopes MCP tool calls to the requesting
+    satellite via the Nexus server (timers on HA >= 2026.10). area_name/
+    floor_name are None when the area entry lacks a name or floor
+    association.
+
+    Note: a satellite entity without a registry device nullifies a passed
+    device_id (device_id = None) — same as HA core's
+    DefaultAgent._get_satellite_area_and_device().
     """
     area_id: str | None = None
 
@@ -152,15 +160,15 @@ def _derive_area_context(
         if device_entry:
             area_id = device_entry.area_id
 
-    # No area resolved — return area_id=None; device_id is consumed
-    # internally and not surfaced (function contract: area_id, area_name, floor_name)
+    # No area resolved — the device is still known and returned (timers work
+    # without an area); area fields are None.
     if area_id is None:
-        return None, None, None
+        return device_id, None, None, None
 
     # Resolve area name and floor
     area_entry = area_registry.async_get(hass).async_get_area(area_id)
     if area_entry is None:
-        return area_id, None, None
+        return device_id, area_id, None, None
 
     area_name = area_entry.name
     floor_name: str | None = None
@@ -170,7 +178,7 @@ def _derive_area_context(
         if floor_entry:
             floor_name = floor_entry.name
 
-    return area_id, area_name, floor_name
+    return device_id, area_id, area_name, floor_name
 
 
 # Max sanitized area/floor name length for LLM prompts
@@ -190,6 +198,23 @@ def _sanitize_area_name(name: str | None) -> str:
         )
         return name[:_MAX_AREA_NAME_LEN]
     return name
+
+
+# OpenAI request-metadata contract: values are capped at 512 chars
+# server-side. Area/floor names are user-editable free text — truncate
+# instead of dropping so device scoping (device_id) is never silently lost.
+_METADATA_VALUE_LIMIT = 512
+
+
+def _truncate_metadata(value: str) -> str:
+    if len(value) > _METADATA_VALUE_LIMIT:
+        LOGGER.warning(
+            "Metadata value (%d chars) exceeds %d-char limit, truncating",
+            len(value),
+            _METADATA_VALUE_LIMIT,
+        )
+        return value[:_METADATA_VALUE_LIMIT]
+    return value
 
 
 def _adjust_schema(schema: dict[str, Any]) -> None:
@@ -589,6 +614,8 @@ class NexusBaseLLMEntity(Entity):
         floor_name: str | None = None,
         user_id: str | None = None,
         user_name: str | None = None,
+        device_id: str | None = None,
+        satellite_id: str | None = None,
     ) -> None:
         """Generate an answer for the chat log."""
         options = self.subentry.data
@@ -766,16 +793,21 @@ class NexusBaseLLMEntity(Entity):
 
         # Build request metadata for tracking/analytics (model does not see this).
         # Metadata is a flat string->string dict capped at 16 KV pairs.
-        # Currently using 5 (area_id, area_name, floor_name, user_id,
-        # conversation_id). Remaining capacity: 11.
+        # Currently using 7 (area_id, area_name, floor_name, user_id,
+        # conversation_id, device_id, satellite_id). Remaining capacity: 9.
+        # device_id is the requesting satellite's HA device-registry id — the
+        # Nexus Server uses it to scope MCP tool lists/calls (timers on
+        # HA >= 2026.10).
         metadata: dict[str, str] = {
-            k: str(v)
+            k: _truncate_metadata(str(v))
             for k, v in (
                 ("area_id", area_id),
                 ("area_name", area_name),
                 ("floor_name", floor_name),
                 ("user_id", user_id),
                 ("conversation_id", chat_log.conversation_id or ""),
+                ("device_id", device_id),
+                ("satellite_id", satellite_id),
             )
             if v
         }

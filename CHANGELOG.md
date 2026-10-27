@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Conversation requests carry `device_id` and `satellite_id` request metadata
+  (resolved from the pipeline's satellite) so the Nexus Server can scope MCP
+  tool lists and tool calls to the requesting assist satellite — unlocks the
+  Home Assistant timer tools (`HassStartTimer`, …) over MCP on HA ≥ 2026.10
+  without changing the transport.
+
 ### Changed
+
+- Request `metadata` values (area/floor names are user-editable) are truncated
+  to the OpenAI 512-char value limit instead of risking a hard request failure.
 
 ### Fixed
 
