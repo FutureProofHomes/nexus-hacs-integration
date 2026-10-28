@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Replace deprecated `ToolResultContent.tool_result` accesses with
+  `ToolResultContent.result.data` and yield tool result deltas as
+  `llm.ToolResult` (`result` key) — the old spellings log a deprecation
+  warning since HA 2026.10 and stop working in HA 2027.11
+- Raise the minimum Home Assistant version to 2026.10.0, where the
+  `ToolResultContent.result` API was introduced
 - Point `documentation` and `issue_tracker` in the manifest, and the config
   flow's `instructions_url`, at `FutureProofHomes/nexus-hacs-integration`,
   and move the manifest `codeowners` to `@FutureProofHomes` — the previous
