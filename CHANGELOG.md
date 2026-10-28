@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Request `metadata` values (area/floor names are user-editable) are truncated
   to the OpenAI 512-char value limit instead of risking a hard request failure.
+- Sync the OpenAI wire protocol with `openai_conversation` 2026.10.0:
+  tool call results now carry the `error` flag to the model
+  (`{"data": ..., "error": ...}`), code interpreter calls round-trip as
+  native `code_interpreter_call` items instead of `function_call_output`,
+  and explicit empty assistant messages (silent after a tool call) are
+  preserved instead of erroring
+- Structured output schemas are hardened against OpenAI's supported JSON
+  Schema subset (ported from upstream `schema.py`): `$ref`/`$defs`
+  stabilization, `allOf` flattening, nullable via `anyOf` wrapper, and
+  `strict: true` set at the `text.format` level; `to_openapi` now emits
+  OpenAPI 3.1.0
+- Drop the `include: ["reasoning.encrypted_content"]` request field, which
+  OpenAI no longer requires (the deprecated `user` request parameter is
+  kept for now)
 
 ### Fixed
 
@@ -35,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   report" links were dead
 
 ### Removed
+
+- The deprecated `nexus_conversation.generate_content` action and its
+  `services.yaml` / translation entries — announced for removal in 2026.9.0
+  and removed by upstream `openai_conversation` in 2026.10.0; use
+  `ai_task.generate_data` instead
 
 ## [0.2.1] - 2026-10-26
 
