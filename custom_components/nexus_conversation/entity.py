@@ -857,14 +857,14 @@ class NexusBaseLLMEntity(Entity):
                 )
             except openai.RateLimitError as err:
                 if (
-                    model_args["service_tier"] == "flex"
+                    kwargs["service_tier"] == "flex"
                     and "resource unavailable" in (err.message or "").lower()
                 ):
                     LOGGER.info(
                         "Flex tier is not available at the moment,"
                         " continuing with default tier"
                     )
-                    model_args["service_tier"] = "default"
+                    kwargs["service_tier"] = "default"
                     continue
                 LOGGER.error("Rate limited by provider: %s", err)
                 msg = "Rate limited or insufficient funds"

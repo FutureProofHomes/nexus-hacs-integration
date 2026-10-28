@@ -80,18 +80,19 @@ This is a Home Assistant integration developed by the **FutureProof Homes Team**
 ## Key Components
 
 ### Main Integration Files
-- `__init__.py`: Main integration setup with deprecated `generate_content` service
+- `__init__.py`: Main integration setup
 - `conversation.py`: Conversation agent implementation
 - `ai_task.py`: AI Task entity implementation
 - `entity.py`: Base entity class with core LLM handling logic
+- `schema.py`: Structured output schema normalization for OpenAI's supported JSON Schema subset
 - `config_flow.py`: Configuration flow for setup (includes subentry flows, zeroconf discovery)
 - `const.py`: Constants and configuration options
 
 ### Services
-One **deprecated** service kept for backward compatibility:
-- `nexus_conversation.generate_content`: Deprecated — use `ai_task.generate_data` instead
 
-Modern integrations should use the AI Task platform directly via subentries.
+There are no integration services. Structured data generation and image
+generation go through the AI Task platform directly via subentries
+(`ai_task.generate_data` action).
 
 ### Platforms
 - `Platform.AI_TASK`: AI Task platform

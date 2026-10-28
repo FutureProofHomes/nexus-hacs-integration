@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The flex service-tier fallback now actually resends the request with
+  `service_tier: default` — it previously mutated a stale copy of the
+  request args, so the retry went out unchanged until the iteration
+  limit was hit and returned silently with no content
 - Replace deprecated `ToolResultContent.tool_result` accesses with
   `ToolResultContent.result.data` and yield tool result deltas as
   `llm.ToolResult` (`result` key) — the old spellings log a deprecation
@@ -51,7 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - The deprecated `nexus_conversation.generate_content` action and its
-  `services.yaml` / translation entries — announced for removal in 2026.9.0
+  `services.yaml`, service icon, `invalid_config_entry` exception string
+  and translation entries — announced for removal in 2026.9.0
   and removed by upstream `openai_conversation` in 2026.10.0; use
   `ai_task.generate_data` instead
 
