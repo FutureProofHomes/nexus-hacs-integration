@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """AI Task integration for Nexus."""
 
 from __future__ import annotations

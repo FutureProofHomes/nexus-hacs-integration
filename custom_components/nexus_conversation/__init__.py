@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """The Nexus Conversation integration."""
 
 from __future__ import annotations

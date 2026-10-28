@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """Conversation support for Nexus."""
 
 from __future__ import annotations
