@@ -9,6 +9,7 @@
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "invalid_url": "The URL must start with http:// or https:// and end with /v1, for example http://YOUR_NEXUS_IP:80/v1",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "step": {
@@ -28,7 +29,7 @@
         },
         "data_description": {
           "api_key": "Your Nexus API key.",
-          "base_url": "The base URL of the Nexus API endpoint, default: http://YOUR_NEXUS_IP:80/v1"
+          "base_url": "The base URL of the Nexus API endpoint, e.g. http://YOUR_NEXUS_IP:80/v1. A missing /v1 suffix is added automatically."
         },
         "description": "Set up Nexus integration by providing your Nexus Device Base URL and API key. Instructions to obtain an API key can be found [here]({instructions_url})."
       },

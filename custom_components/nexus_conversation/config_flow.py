@@ -104,8 +104,7 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        # The appliance exposes plain HTTP on :80 via its reverse proxy; a
-        # direct backend deployment would be :5015 (HTTPS by default).
+        # The appliance exposes plain HTTP on :80 via its reverse proxy.
         vol.Required(CONF_BASE_URL, default="http://<NEXUS_IP>:80/v1"): str,
         vol.Required(CONF_API_KEY, default="sk-1"): str,
     }
@@ -148,6 +147,28 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
             raise vol.Invalid(msg) from err
         msg = f"Health check failed ({err.status_code})"
         raise vol.Invalid(msg) from err
+
+
+def _normalize_base_url(base_url: str) -> str:
+    """Append a missing /v1 so users can paste the bare host or a subpath."""
+    parsed = urllib.parse.urlparse(base_url)
+    # Leave anything that is not a well-formed http(s) URL alone so
+    # validate_input rejects it with a proper field error instead of
+    # "repairing" it into a URL that silently points nowhere.
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return base_url
+    if parsed.path.rstrip("/").lower().endswith("/v1"):
+        return base_url
+    return urllib.parse.urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path.rstrip("/") + "/v1",
+            parsed.params,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
 
 
 class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -255,7 +276,6 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle zeroconf discovery."""
         host = discovery_info.host
-        port = discovery_info.port or 5015
         # Nexus advertises its URL scheme in the TXT record: the appliance
         # serves plain HTTP through its reverse proxy while the backend is
         # HTTPS-only. Announcements without it are plain-HTTP backends.
@@ -263,6 +283,9 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
         scheme = (
             discovery_info.properties.get("scheme") or DEFAULT_DISCOVERY_SCHEME
         ).strip().lower() or DEFAULT_DISCOVERY_SCHEME
+        # Announcements carry their real port; fall back to the scheme's
+        # default for records without one.
+        port = discovery_info.port or (443 if scheme == "https" else 80)
         base_url = f"{scheme}://{host}:{port}/v1"
 
         self._discovered_host = host
@@ -346,6 +369,11 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            if CONF_BASE_URL in user_input:
+                user_input = {
+                    **user_input,
+                    CONF_BASE_URL: _normalize_base_url(user_input[CONF_BASE_URL]),
+                }
             self._async_abort_entries_match(user_input)
             try:
                 await validate_input(self.hass, user_input)
@@ -357,6 +385,10 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
                 msg = str(val_err)
                 if "Invalid API key" in msg:
                     errors["base"] = "invalid_auth"
+                elif "Invalid URL for base_url" in msg or "must end with /v1" in msg:
+                    # Keyed by field name so HA renders the message right
+                    # above the Base URL field instead of a generic alert.
+                    errors[CONF_BASE_URL] = "invalid_url"
                 elif (
                     "Cannot connect" in msg
                     or "timed out" in msg

@@ -51,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and move the manifest `codeowners` to `@FutureProofHomes` — the previous
   URLs pointed at a repository that no longer exists, so HA's "create a bug
   report" links were dead
+- The setup form no longer fails with a generic "Unknown error" when the
+  base URL is missing its `/v1` suffix: the suffix is appended
+  automatically (the stored entry keeps the normalized URL), and a
+  genuinely invalid URL now shows a field-level error under the Base URL
+  field instead of only in the log
 
 ### Removed
 
