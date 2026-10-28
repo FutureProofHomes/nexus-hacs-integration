@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Brand assets shipped inside the integration folder
+  (`custom_components/nexus_conversation/brand/icon.png` and `logo.png`) so the
+  Home Assistant 2026.11 Marketplace brands view shows them before install, and
+  a `categories` manifest entry (`ai_voice.voice_assistants`) for Marketplace
+  catalog discoverability.
+
 - Conversation requests carry `device_id` and `satellite_id` request metadata
   (resolved from the pipeline's satellite) so the Nexus Server can scope MCP
   tool lists and tool calls to the requesting assist satellite — unlocks the
@@ -16,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without changing the transport.
 
 ### Changed
+
+- README documents both distribution paths: the built-in Marketplace on Home
+  Assistant 2026.11+ ("Add from link") and HACS on ≤ 2026.10. The HACS badge
+  now reflects Custom (not Default) status until the catalog PR merges, and
+  `hacs/action` validation is pinned to `main` — the previous pin (22.5.0,
+  2022) predates Marketplace-era checks.
 
 - Request `metadata` values (area/floor names are user-editable) are truncated
   to the OpenAI 512-char value limit instead of risking a hard request failure.
