@@ -1,0 +1,77 @@
+# ============================================================
+# WorkTrunk — FutureProofHomes HACS integration configuration
+# Shared team settings: hooks and aliases.
+# LLM command & commit.stage belong in user config.
+# ============================================================
+
+# POST-START: Copies git-ignored files (task notes, caches) into a
+# newly created worktree.
+[[post-start]]
+copy = "wt step copy-ignored"
+
+[commit.generation]
+template-append = """
+Convention: Conventional Commits (<type>(<scope>): <subject>)
+Allowed Types: feat, fix, perf, refactor, docs, test, chore, ci, build, style, revert
+Any <scope> is accepted, eg.: conversation, ai_task, entity, config_flow, migrations, services, ha, tests, docs, etc...
+Omit <scope> only for cross-cutting changes.
+"""
+
+[step.copy-ignored]
+exclude = ["task/", ".worktrees/", ".ruff_cache/", ".venv/", "config/"]
+
+[aliases]
+# Generate a conventional-commit message from the staged changes via wt step commit
+commit = "wt step commit"
+# Push the current branch to origin and set the upstream tracking branch
+push = "git push --set-upstream origin {{ branch }}"
+# Generate a PR description (title, summary, changes, testing notes) via Opencode LLM, targeting origin/main by default
+pr = '''
+TMPDIR="${TMPDIR:-/tmp}"
+_BASE={% if args | length > 0 %}{{ args[0] }}{% else %}origin/main{% endif %}
+_DIFF="$TMPDIR/.wt-pr-diff-$$.txt"
+_PR="$TMPDIR/.wt-pr-$$.txt"
+trap 'rm -f "$_DIFF" "$_PR"' EXIT
+
+# Keep diff ≤ 3000 lines so the prompt stays sane and avoids ARG_MAX overflow.
+git diff --no-color "$_BASE"...HEAD | head -3000 > "$_DIFF"
+
+cat > "$_PR" <<EOF
+Generate a GitHub Pull Request description in Markdown for branch '{{ branch }}' against '${_BASE}'.
+Include: title, summary, what changed and why, and testing notes.
+
+Diff:
+$(cat "$_DIFF")
+EOF
+
+bash -c '
+  set -a
+  [ -f ~/.config/opencode/.env ] && . ~/.config/opencode/.env
+  MODEL_ARGS=()
+  # Pass --model only when WORKTRUNK_LLM_MODEL is set; omit the flag entirely when unset (opencode uses its default model).
+  [ -n "${WORKTRUNK_LLM_MODEL:-}" ] && MODEL_ARGS=(--model "$WORKTRUNK_LLM_MODEL")
+  exec opencode run "${MODEL_ARGS[@]}" < "$1"
+' -- "$_PR"
+'''
+# Stop and remove a WorkTrunk branch (shorthand for wt remove)
+rm = "wt remove {{ args }}"
+# Create a new branch checked-out from the latest origin/<base_branch> and initialise its worktree (requires <branch_name>; accepts optional <base_branch>, defaults to main)
+new = '''
+{% if args | length == 0 %}
+  echo "Missing <branch_name>!" >&2
+  exit 1
+{% else %}
+  BASE_BRANCH={% if args | length > 1 %}{{ args[1] }}{% else %}main{% endif %}
+  git fetch origin "$BASE_BRANCH" --quiet
+  wt switch --base "origin/$BASE_BRANCH" --create {{ args[0] }}
+{% endif %}
+'''
+# Full workflow shortcut: stage, commit, rebased onto main, push, and draft a PR
+ship = '''
+git add .
+wt commit
+git fetch origin main
+git merge origin/main
+wt push
+wt pr
+'''
