@@ -9,6 +9,7 @@ from mimetypes import guess_file_type
 from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import openai
+import probatio
 from homeassistant.components import conversation
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
@@ -30,6 +31,7 @@ from openai.types.responses import (
     EasyInputMessageParam,
     FunctionToolParam,
     ResponseCodeInterpreterToolCall,
+    ResponseCodeInterpreterToolCallParam,
     ResponseCompletedEvent,
     ResponseErrorEvent,
     ResponseFailedEvent,
@@ -72,7 +74,6 @@ from openai.types.responses.tool_param import (
     CodeInterpreterContainerCodeInterpreterToolAuto,
 )
 from openai.types.responses.web_search_tool_param import UserLocation
-from probatio import to_openapi
 
 from .const import (
     CONF_CHAT_MODEL,
@@ -108,15 +109,18 @@ from .const import (
     RECOMMENDED_WEB_SEARCH_INLINE_CITATIONS,
     UNSUPPORTED_EXTENDED_CACHE_RETENTION_MODELS,
 )
+from .schema import adjust_schema
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Iterable
     from pathlib import Path
 
-    import voluptuous as vol
     from homeassistant.config_entries import ConfigSubentry
     from homeassistant.core import HomeAssistant
     from openai._streaming import AsyncStream
+    from openai.types.responses.response_code_interpreter_tool_call_param import (
+        Output as CodeInterpreterOutputParam,
+    )
 
     from . import NexusConfigEntry
 
@@ -217,43 +221,19 @@ def _truncate_metadata(value: str) -> str:
     return value
 
 
-def _adjust_schema(schema: dict[str, Any]) -> None:
-    """Adjust the output schema to be compatible with the upstream LLM API."""
-    if schema["type"] == "object":
-        schema.setdefault("strict", True)
-        schema.setdefault("additionalProperties", False)
-        if "properties" not in schema:
-            return
-
-        if "required" not in schema:
-            schema["required"] = []
-
-        # Ensure all properties are required
-        for prop, prop_info in schema["properties"].items():
-            _adjust_schema(prop_info)
-            if prop not in schema["required"]:
-                prop_info["type"] = [prop_info["type"], "null"]
-                schema["required"].append(prop)
-
-    elif schema["type"] == "array":
-        if "items" not in schema:
-            return
-
-        _adjust_schema(schema["items"])
-
-
 def _format_structured_output(
-    schema: vol.Schema, llm_api: llm.APIInstance | None
+    schema: probatio.Schema, llm_api: llm.APIInstance | None
 ) -> dict[str, Any]:
     """Format the schema to be compatible with the upstream LLM API."""
-    result: dict[str, Any] = to_openapi(
+    result: dict[str, Any] = probatio.to_openapi(
         schema,
         custom_serializer=(
             llm_api.custom_serializer if llm_api else llm.selector_serializer
         ),
+        openapi_version="3.1.0",
     )
 
-    _adjust_schema(result)
+    adjust_schema(result)
 
     return result
 
@@ -263,7 +243,9 @@ def _format_tool(
 ) -> FunctionToolParam:
     """Format tool specification."""
     unsupported_keys = {"oneOf", "anyOf", "allOf", "enum", "not"}
-    schema = to_openapi(tool.parameters, custom_serializer=custom_serializer)
+    schema = probatio.to_openapi(
+        tool.parameters, custom_serializer=custom_serializer, openapi_version="3.1.0"
+    )
     if unsupported_keys.intersection(schema):
         schema = {k: v for k, v in schema.items() if k not in unsupported_keys}
 
@@ -283,6 +265,7 @@ def _convert_content_to_param(
     messages: ResponseInputParam = []
     reasoning_summary: list[str] = []
     web_search_calls: dict[str, ResponseFunctionWebSearchParam] = {}
+    code_interpreter_calls: dict[str, llm.ToolInput] = {}
 
     for content in chat_content:
         if isinstance(content, conversation.ToolResultContent):
@@ -291,16 +274,39 @@ def _convert_content_to_param(
                 and content.tool_call_id in web_search_calls
             ):
                 web_search_call = web_search_calls.pop(content.tool_call_id)
-                web_search_call["status"] = content.tool_result.get(  # type: ignore[typeddict-item]
+                web_search_call["status"] = content.result.data.get(  # type: ignore[typeddict-item]
                     "status", "completed"
                 )
                 messages.append(web_search_call)
+            elif (
+                content.tool_name == "code_interpreter"
+                and content.tool_call_id in code_interpreter_calls
+            ):
+                tool_call = code_interpreter_calls.pop(content.tool_call_id)
+                messages.append(
+                    ResponseCodeInterpreterToolCallParam(
+                        type="code_interpreter_call",
+                        id=tool_call.id,
+                        code=tool_call.tool_args["code"],
+                        container_id=cast("str", content.result.data["container_id"]),
+                        outputs=cast(
+                            "list[CodeInterpreterOutputParam] | None",
+                            content.result.data["output"],
+                        ),
+                        status=content.result.data["status"],  # type: ignore[typeddict-item]
+                    )
+                )
             else:
                 messages.append(
                     FunctionCallOutput(
                         type="function_call_output",
                         call_id=content.tool_call_id,
-                        output=json_dumps(content.tool_result),
+                        output=json_dumps(
+                            {
+                                "data": content.result.data,
+                                "error": content.result.error,
+                            }
+                        ),
                     )
                 )
             continue
@@ -329,6 +335,10 @@ def _convert_content_to_param(
                             action=tool_call.tool_args["action"],
                             status="completed",
                         )
+                    elif (
+                        tool_call.external and tool_call.tool_name == "code_interpreter"
+                    ):
+                        code_interpreter_calls[tool_call.id] = tool_call
                     else:
                         messages.append(
                             ResponseFunctionToolCallParam(
@@ -429,10 +439,7 @@ async def _transform_stream(
                         llm.ToolInput(
                             id=event.item.id,
                             tool_name="code_interpreter",
-                            tool_args={
-                                "code": event.item.code,
-                                "container": event.item.container_id,
-                            },
+                            tool_args={"code": event.item.code},
                             external=True,
                         )
                     ]
@@ -441,13 +448,18 @@ async def _transform_stream(
                     "role": "tool_result",
                     "tool_call_id": event.item.id,
                     "tool_name": "code_interpreter",
-                    "tool_result": {
-                        "output": (
-                            [output.to_dict() for output in event.item.outputs]  # type: ignore[misc]
-                            if event.item.outputs is not None
-                            else None
-                        )
-                    },
+                    "result": llm.ToolResult(
+                        data={
+                            "container_id": event.item.container_id,
+                            "output": (
+                                [output.to_dict() for output in event.item.outputs]  # type: ignore[misc]
+                                if event.item.outputs is not None
+                                else None
+                            ),
+                            "status": event.item.status,
+                        },
+                        error=event.item.status == "failed",
+                    ),
                 }
                 last_role = "tool_result"
             elif isinstance(event.item, ResponseFunctionWebSearch):
@@ -469,7 +481,10 @@ async def _transform_stream(
                     "role": "tool_result",
                     "tool_call_id": event.item.id,
                     "tool_name": "web_search_call",
-                    "tool_result": {"status": event.item.status},
+                    "result": llm.ToolResult(
+                        data={"status": event.item.status},
+                        error=event.item.status == "failed",
+                    ),
                 }
                 last_role = "tool_result"
             elif isinstance(event.item, ImageGenerationCall):
@@ -524,6 +539,19 @@ async def _transform_stream(
                 ]
             }
         elif isinstance(event, ResponseCompletedEvent):
+            if (
+                event.response.output
+                and isinstance(
+                    message := event.response.output[-1], ResponseOutputMessage
+                )
+                and message.status == "completed"
+                and message.content
+                and all(
+                    part.type == "output_text" and part.text == ""
+                    for part in message.content
+                )
+            ):
+                yield {"content": ""}
             if event.response.usage is not None:
                 chat_log.async_trace(
                     {
@@ -606,7 +634,7 @@ class NexusBaseLLMEntity(Entity):
         self,
         chat_log: conversation.ChatLog,
         structure_name: str | None = None,
-        structure: vol.Schema | None = None,
+        structure: probatio.Schema | None = None,
         max_iterations: int = MAX_TOOL_ITERATIONS,
         *,
         area_id: str | None = None,
@@ -674,7 +702,6 @@ class NexusBaseLLMEntity(Entity):
             if reasoning_summary != "off":
                 reasoning["summary"] = reasoning_summary
             model_args["reasoning"] = reasoning
-            model_args["include"] = ["reasoning.encrypted_content"]
 
         if (
             not model_args["model"].startswith("gpt-5")
@@ -781,12 +808,11 @@ class NexusBaseLLMEntity(Entity):
                 raise HomeAssistantError(msg)
 
         if structure and structure_name:
-            model_args["text"] = {
-                "format": {
-                    "type": "json_schema",
-                    "name": slugify(structure_name),
-                    "schema": _format_structured_output(structure, chat_log.llm_api),
-                },
+            model_args.setdefault("text", {})["format"] = {
+                "type": "json_schema",
+                "name": slugify(structure_name),
+                "schema": _format_structured_output(structure, chat_log.llm_api),
+                "strict": True,
             }
 
         client = self.entry.runtime_data
@@ -831,14 +857,14 @@ class NexusBaseLLMEntity(Entity):
                 )
             except openai.RateLimitError as err:
                 if (
-                    model_args["service_tier"] == "flex"
+                    kwargs["service_tier"] == "flex"
                     and "resource unavailable" in (err.message or "").lower()
                 ):
                     LOGGER.info(
                         "Flex tier is not available at the moment,"
                         " continuing with default tier"
                     )
-                    model_args["service_tier"] = "default"
+                    kwargs["service_tier"] = "default"
                     continue
                 LOGGER.error("Rate limited by provider: %s", err)
                 msg = "Rate limited or insufficient funds"
