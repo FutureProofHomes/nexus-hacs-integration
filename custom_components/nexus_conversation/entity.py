@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """Base entity for Nexus."""
 
 from __future__ import annotations

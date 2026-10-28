@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """Config flow for Nexus Conversation integration."""
 
 from __future__ import annotations

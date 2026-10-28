@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """Constants for the Nexus Conversation integration."""
 
 from __future__ import annotations

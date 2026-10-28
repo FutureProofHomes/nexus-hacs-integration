@@ -1,3 +1,4 @@
+# Copyright (c) 2026 FutureProofHomes
 """Convert output schemas to OpenAI's supported JSON Schema subset for strict structured output format."""
 
 # Documentation: https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses#supported-schemas
