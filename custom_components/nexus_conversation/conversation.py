@@ -88,7 +88,7 @@ class NexusConversationEntity(
             return err.as_conversation_result()
 
         # Derive area context from the device/satellite that initiated this intent
-        area_id, area_name, floor_name = _derive_area_context(
+        device_id, area_id, area_name, floor_name = _derive_area_context(
             self.hass,
             user_input.device_id,
             user_input.satellite_id,
@@ -109,6 +109,8 @@ class NexusConversationEntity(
             floor_name=floor_name,
             user_id=user_id,
             user_name=user_name,
+            device_id=device_id,
+            satellite_id=user_input.satellite_id,
         )
 
         return conversation.async_get_result_from_chat_log(user_input, chat_log)
