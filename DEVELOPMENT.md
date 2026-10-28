@@ -13,7 +13,7 @@ This guide provides instructions for setting up the development environment and 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/ms1design/nexus-hacs-integration.git
+git clone https://github.com/FutureProofHomes/nexus-hacs-integration.git
 cd nexus-hacs-integration
 ```
 

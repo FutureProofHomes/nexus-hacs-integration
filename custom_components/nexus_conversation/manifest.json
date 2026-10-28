@@ -6,17 +6,17 @@
     "intent"
   ],
   "codeowners": [
-    "@ms1design"
+    "@FutureProofHomes"
   ],
   "config_flow": true,
   "dependencies": [
     "conversation",
     "zeroconf"
   ],
-  "documentation": "https://github.com/ms1design/nexus-hacs-integration",
+  "documentation": "https://github.com/FutureProofHomes/nexus-hacs-integration",
   "integration_type": "service",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/ms1design/nexus-hacs-integration/issues",
+  "issue_tracker": "https://github.com/FutureProofHomes/nexus-hacs-integration/issues",
   "requirements": [
     "openai>=2.45.0"
   ],

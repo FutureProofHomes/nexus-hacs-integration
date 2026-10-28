@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Point `documentation` and `issue_tracker` in the manifest, and the config
+  flow's `instructions_url`, at `FutureProofHomes/nexus-hacs-integration`,
+  and move the manifest `codeowners` to `@FutureProofHomes` — the previous
+  URLs pointed at a repository that no longer exists, so HA's "create a bug
+  report" links were dead
+
 ### Removed
 
 ## [0.2.1] - 2026-10-26
