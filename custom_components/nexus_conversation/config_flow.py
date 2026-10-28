@@ -400,7 +400,7 @@ class NexusConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={
-                "instructions_url": "https://github.com/ms1design/nexus-hacs-integration",
+                "instructions_url": "https://github.com/FutureProofHomes/nexus-hacs-integration",
             },
         )
 
