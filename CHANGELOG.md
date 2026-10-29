@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.3.0] - 2026-10-29
+
 ### Added
 
 - Conversation requests carry `device_id` and `satellite_id` request metadata
@@ -56,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   automatically (the stored entry keeps the normalized URL), and a
   genuinely invalid URL now shows a field-level error under the Base URL
   field instead of only in the log
+- Restore the `issues` section key in `strings.json` (broken by the
+  `generate_content` cleanup) so the organization-verification repair
+  issue resolves its title/description again
 
 ### Removed
 
