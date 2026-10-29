@@ -25,7 +25,7 @@
 
 <br/>
 
-[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
+[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/futureproofhomes/nexus-hacs-integration)](https://github.com/futureproofhomes/nexus-hacs-integration/releases)
 
 ## Overview
@@ -66,7 +66,23 @@ These enrichments happen transparently before the request reaches Nexus — no p
 
 ## Installation
 
-### HACS (Recommended)
+### Home Assistant Marketplace (2026.11+)
+
+Home Assistant 2026.11 ships with a built-in **Marketplace** (HACS folded into
+Core). Until Nexus is accepted into the default catalog, install it as a
+custom repository:
+
+1. Open **Settings → Marketplace**
+2. Select **Add from link** and paste `https://github.com/futureproofhomes/nexus-hacs-integration`
+3. Connect your GitHub account when prompted (required for custom repositories)
+4. Click **Download** and restart Home Assistant
+5. Go to **Settings → Devices & Services → Add Integration** → search for **"Nexus"**
+
+### HACS (Home Assistant ≤ 2026.10)
+
+The standalone HACS integration is replaced by the built-in Marketplace on
+2026.11 — existing installs auto-migrate on first start and this repository
+carries over with no action required.
 
 1. Open HACS → Integrations → "+" → **Explore & Download Repositories**
 2. Search for **"Nexus"** or add this repository: `https://github.com/futureproofhomes/nexus-hacs-integration`
@@ -101,7 +117,7 @@ After installing, add the Nexus integration through the HA UI:
 For a complete end-to-end setup:
 
 1. **Start Nexus OS** — Flash the **Nexus AI Base Station** ISO to an NVMe drive and run `nexus up`. Nexus broadcasts itself on the network via mDNS and will be auto-discovered by Home Assistant.
-2. **Install this HACS Integration** — as described above
+2. **Install the Nexus integration** — as described above
 3. **Configure the Conversation Agent** — discover Nexus via zeroconf or enter the endpoint manually
 4. **Activate the MCP Server** — add the Home Assistant MCP Server integration to expose LLM Tools for Nexus
 5. **Connect STT & TTS** — configure Wyoming STT/TTS integrations with your Nexus host
