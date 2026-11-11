@@ -109,10 +109,9 @@ python -m ruff format .
 
 ### HACS Validation
 
-```bash
-pip install hacs-validation
-hacs validate
-```
+HACS validation runs through the `hacs/action` GitHub Action in
+`.github/workflows/validate.yml` on every push and pull request — the same
+check the Marketplace catalog review runs. There is no standalone CLI anymore.
 
 ### Home Assistant Core Validation (hassfest)
 
